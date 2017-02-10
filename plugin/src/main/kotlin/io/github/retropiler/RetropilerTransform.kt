@@ -67,10 +67,18 @@ class RetropilerTransform(val project: Project) : Transform() {
                 lambdaClass.addInterface(classPool.get("io.github.retropiler.runtime.JavaUtilFunctionConsumer"))
 
                 val lambdaFactory = lambdaClass.getDeclaredMethod("lambdaFactory$")
-                val newLambdaFactory = CtMethod.make("""
-                    public static ${lambdaClass.name} lambdaFactory$() { return instance; }
-                """, lambdaClass);
-                lambdaClass.addMethod(newLambdaFactory)
+                if (lambdaFactory.parameterTypes.isEmpty()) {
+                    val newLambdaFactory = CtMethod.make("""
+                        public static ${lambdaClass.name} lambdaFactory$() { return instance; }
+                    """, lambdaClass);
+                    lambdaClass.addMethod(newLambdaFactory)
+                } else {
+                    val newLambdaFactory = CtMethod(lambdaClass, "lambdaFactory$", lambdaFactory.parameterTypes, lambdaClass)
+                    newLambdaFactory.setBody("""
+                        { return new ${lambdaClass.name}($$); }
+                    """)
+                    lambdaClass.addMethod(newLambdaFactory)
+                }
             }
         }
 

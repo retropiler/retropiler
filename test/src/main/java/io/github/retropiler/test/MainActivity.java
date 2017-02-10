@@ -18,5 +18,9 @@ public class MainActivity extends AppCompatActivity {
         Arrays.asList("foo", "bar").forEach(s -> {
             Log.d("RetropilerExample", s);
         });
+
+        Arrays.asList("foo", "bar").forEach(s -> {
+            Log.d("RetropilerExample", MainActivity.this + " " + s);
+        });
     }
 }
