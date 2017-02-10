@@ -4,11 +4,13 @@ import com.android.SdkConstants
 import com.android.build.api.transform.*
 import com.android.build.gradle.AppExtension
 import javassist.ClassPool
+import javassist.CtMethod
 import org.gradle.api.Project
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.util.*
 import java.util.jar.JarFile
+import java.util.regex.Pattern
 
 class RetropilerTransform(val project: Project) : Transform() {
 
@@ -28,18 +30,13 @@ class RetropilerTransform(val project: Project) : Transform() {
 
     override fun getScopes(): Set<QualifiedContent.Scope> {
         return EnumSet.of(
-                QualifiedContent.Scope.PROJECT
-        )
+                QualifiedContent.Scope.PROJECT,
+                QualifiedContent.Scope.PROJECT_LOCAL_DEPS)
     }
 
     override fun getReferencedScopes(): Set<QualifiedContent.Scope> {
         return EnumSet.of(
-                QualifiedContent.Scope.PROJECT_LOCAL_DEPS,
-                QualifiedContent.Scope.SUB_PROJECTS,
-                QualifiedContent.Scope.SUB_PROJECTS_LOCAL_DEPS,
-                QualifiedContent.Scope.EXTERNAL_LIBRARIES,
-                QualifiedContent.Scope.TESTED_CODE
-        )
+                QualifiedContent.Scope.EXTERNAL_LIBRARIES)
     }
 
     override fun transform(invocation: TransformInvocation) {
@@ -47,6 +44,73 @@ class RetropilerTransform(val project: Project) : Transform() {
 
         val outputDir = invocation.outputProvider.getContentLocation(name, outputTypes, scopes, Format.DIRECTORY)
 
+        val classNames = collectClassNames(invocation)
+
+        val classPool = ClassPool(null)
+        classPool.appendSystemPath()
+        project.extensions.findByType(AppExtension::class.java).bootClasspath.forEach {
+            classPool.appendClassPath(it.absolutePath)
+        }
+
+        collectClassPath(invocation).forEach {
+            System.out.println("classPath: $it")
+            classPool.appendClassPath(it.absolutePath)
+        }
+
+        classPool.appendClassPath(project.rootProject.file("runtime/build/classes/main").absolutePath)
+
+        val lambdaPattern = Pattern.compile(".+\\\$\\\$Lambda\\\$\\d+")
+
+        classNames.forEach { className ->
+            if (lambdaPattern.matcher(className).matches()) {
+                val lambdaClass = classPool.get(className)
+                lambdaClass.addInterface(classPool.get("io.github.retropiler.runtime.JavaUtilFunctionConsumer"))
+
+                val lambdaFactory = lambdaClass.getDeclaredMethod("lambdaFactory$")
+                val newLambdaFactory = CtMethod.make("""
+                    public static ${lambdaClass.name} lambdaFactory$() { return instance; }
+                """, lambdaClass);
+                lambdaClass.addMethod(newLambdaFactory)
+            }
+        }
+
+        classNames.forEach { className ->
+            val ctClass = classPool.get(className)
+            ctClass.instrument(RetropilerExprEditor(classPool))
+
+        }
+
+        classNames.forEach { className ->
+            val ctClass = classPool.get(className)
+
+            if (lambdaPattern.matcher(className).matches()) {
+                ctClass.interfaces = ctClass.interfaces.filter {
+                    it.name != "java.util.function.Consumer"
+                }.toTypedArray()
+            }
+
+            ctClass.writeFile(outputDir.canonicalPath)
+        }
+
+        copyResourceFiles(invocation.inputs, outputDir)
+
+        logger.info("transform: ${System.currentTimeMillis() - t0}ms")
+    }
+
+    fun collectClassPath(invocation: TransformInvocation): Set<File> {
+        val files = HashSet<File>()
+        invocation.inputs.forEach { input ->
+            files.addAll(input.directoryInputs.map { it.file })
+            files.addAll(input.jarInputs.map { it.file })
+        }
+        invocation.referencedInputs.forEach { input ->
+            files.addAll(input.directoryInputs.map { it.file })
+            files.addAll(input.jarInputs.map { it.file })
+        }
+        return files;
+    }
+
+    fun collectClassNames(invocation: TransformInvocation): List<String> {
         val classNames = ArrayList<String>()
 
         if (invocation.isIncremental) {
@@ -63,60 +127,20 @@ class RetropilerTransform(val project: Project) : Transform() {
                     .filter { requiresTransform(it.status) }
                     .map { JarFile(it.file) }
                     .flatMap { it.entries().toList() }
-                    .filter { !it.name.startsWith("android/") } // skip official classes
                     .filter { !it.isDirectory && it.name.endsWith(SdkConstants.DOT_CLASS) }
                     .map { jarEntry -> pathToClassName(jarEntry.name) }
         } else {
             classNames.addAll(
                     invocation.inputs
                             .flatMap { it.directoryInputs }
-                            .flatMap { listFilesRecursively(it.file, it.file) }
+                            .flatMap { listFilesRecursively(it.file).map { file -> file.relativeTo(it.file) } }
                             .map { it.path }
-                            .filter { it.startsWith("android/") } // skip official classes
                             .filter { it.endsWith(SdkConstants.DOT_CLASS) }
                             .map { pathToClassName(it) }
             )
         }
 
-        val classPool = ClassPool(null)
-        classPool.appendSystemPath()
-        project.extensions.findByType(AppExtension::class.java).bootClasspath.forEach {
-            classPool.appendClassPath(it.absolutePath)
-        }
-
-        invocation.inputs.forEach {
-            it.directoryInputs.forEach {
-                classPool.appendClassPath(it.file.absolutePath)
-            }
-            it.jarInputs.forEach {
-                classPool.appendClassPath(it.file.absolutePath)
-            }
-        }
-        invocation.referencedInputs.forEach {
-            it.directoryInputs.forEach {
-                classPool.appendClassPath(it.file.absolutePath)
-            }
-            it.jarInputs.forEach {
-                classPool.appendClassPath(it.file.absolutePath)
-            }
-        }
-
-        classNames.forEach { className ->
-            System.out.println("XXX className=$className")
-            val ctClass = classPool.get(className)
-
-            ctClass.writeFile(outputDir.canonicalPath)
-        }
-
-        invocation.inputs.forEach {
-            it.directoryInputs.forEach {
-                // TODO: copy resources
-            }
-        }
-
-        //RetropilerMain(inputClassFiles, outputDir).run()
-
-        logger.info("transform: ${System.currentTimeMillis() - t0}ms")
+        return classNames
     }
 
     fun requiresTransform(status: Status): Boolean {
@@ -129,17 +153,33 @@ class RetropilerTransform(val project: Project) : Transform() {
                 .replace("\\", ".")
     }
 
-    fun listFilesRecursively(root: File, dir: File): Collection<File> {
+    fun listFilesRecursively(dir: File): Collection<File> {
         val list = ArrayList<File>()
 
         dir.listFiles().forEach { file ->
             if (file.isDirectory) {
-                list.addAll(listFilesRecursively(root, file))
+                list.addAll(listFilesRecursively(file))
             } else if (file.isFile) {
-                list.add(file.relativeTo(root))
+                list.add(file)
             }
         }
 
         return list
+    }
+
+
+    fun copyResourceFiles(inputs: Collection<TransformInput>, outputDir: File) {
+        inputs.forEach {
+            it.directoryInputs.forEach {
+                val dirPath = it.file.absoluteFile;
+
+                listFilesRecursively(dirPath)
+                        .filter { !it.name.endsWith(SdkConstants.DOT_CLASS) }
+                        .forEach { file ->
+                            val dest = File(outputDir, file.relativeTo(dirPath).path)
+                            System.out.println(dest)
+                        }
+            }
+        }
     }
 }

@@ -3,6 +3,7 @@ package io.github.retropiler.test;
 import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 
 import java.util.Arrays;
 
@@ -15,7 +16,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         Arrays.asList("foo", "bar").forEach(s -> {
-            System.out.println("-> " + s);
+            Log.d("RetropilerExample", s);
         });
     }
 }
