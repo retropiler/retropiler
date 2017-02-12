@@ -65,18 +65,19 @@ class RetropilerTransform(val project: Project) : Transform() {
 
         val ctClasses = collectClassNames(invocation).map { className -> classPool.get(className) }
 
-
+        // pre process
         ctClasses.forEach { ctClass ->
             if (lambdaClassPattern.matcher(ctClass.simpleName).matches()) {
                 fixupLambdaClass(ctClass, classPool)
             }
         }
 
+        // main process
         ctClasses.forEach { ctClass ->
             ctClass.instrument(RetropilerExprEditor(classPool))
-
         }
 
+        // post process and write it down
         ctClasses.forEach { ctClass ->
             if (lambdaClassPattern.matcher(ctClass.simpleName).matches()) {
                 cleanupLambdaClass(ctClass, classPool)
