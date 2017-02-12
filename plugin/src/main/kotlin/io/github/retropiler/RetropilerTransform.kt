@@ -4,7 +4,9 @@ import com.android.SdkConstants
 import com.android.build.api.transform.*
 import com.android.build.gradle.AppExtension
 import javassist.ClassPool
+import javassist.CtClass
 import javassist.CtMethod
+import javassist.Modifier
 import org.gradle.api.Project
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -15,6 +17,10 @@ import java.util.regex.Pattern
 class RetropilerTransform(val project: Project) : Transform() {
 
     val logger = LoggerFactory.getLogger(RetropilerTransform::class.java)
+
+    val lambdaClassPattern = Pattern.compile(".+\\\$\\\$Lambda\\\$\\d+")
+
+    val lambdaFactoryName = "lambdaFactory$"
 
     override fun getName(): String {
         return "retropiler"
@@ -29,14 +35,14 @@ class RetropilerTransform(val project: Project) : Transform() {
     }
 
     override fun getScopes(): Set<QualifiedContent.Scope> {
-        return EnumSet.of(
-                QualifiedContent.Scope.PROJECT,
-                QualifiedContent.Scope.PROJECT_LOCAL_DEPS)
+        return EnumSet.of(QualifiedContent.Scope.PROJECT)
     }
 
     override fun getReferencedScopes(): Set<QualifiedContent.Scope> {
+        // to refer JARs in dependencies
         return EnumSet.of(
-                QualifiedContent.Scope.EXTERNAL_LIBRARIES)
+                QualifiedContent.Scope.EXTERNAL_LIBRARIES,
+                QualifiedContent.Scope.PROJECT_LOCAL_DEPS)
     }
 
     override fun transform(invocation: TransformInvocation) {
@@ -57,28 +63,12 @@ class RetropilerTransform(val project: Project) : Transform() {
             classPool.appendClassPath(it.absolutePath)
         }
 
-        classPool.appendClassPath(project.rootProject.file("runtime/build/classes/main").absolutePath)
-
-        val lambdaPattern = Pattern.compile(".+\\\$\\\$Lambda\\\$\\d+")
+        classPool.appendClassPath(project.rootProject.file("runtime/build/classes/main").absolutePath) // FIXME
 
         classNames.forEach { className ->
-            if (lambdaPattern.matcher(className).matches()) {
-                val lambdaClass = classPool.get(className)
-                lambdaClass.addInterface(classPool.get("io.github.retropiler.runtime.JavaUtilFunctionConsumer"))
-
-                val lambdaFactory = lambdaClass.getDeclaredMethod("lambdaFactory$")
-                if (lambdaFactory.parameterTypes.isEmpty()) {
-                    val newLambdaFactory = CtMethod.make("""
-                        public static ${lambdaClass.name} lambdaFactory$() { return instance; }
-                    """, lambdaClass);
-                    lambdaClass.addMethod(newLambdaFactory)
-                } else {
-                    val newLambdaFactory = CtMethod(lambdaClass, "lambdaFactory$", lambdaFactory.parameterTypes, lambdaClass)
-                    newLambdaFactory.setBody("""
-                        { return new ${lambdaClass.name}($$); }
-                    """)
-                    lambdaClass.addMethod(newLambdaFactory)
-                }
+            if (lambdaClassPattern.matcher(className).matches()) {
+                val ctClass = classPool.get(className)
+                fixupLambdaClass(ctClass, classPool)
             }
         }
 
@@ -91,10 +81,8 @@ class RetropilerTransform(val project: Project) : Transform() {
         classNames.forEach { className ->
             val ctClass = classPool.get(className)
 
-            if (lambdaPattern.matcher(className).matches()) {
-                ctClass.interfaces = ctClass.interfaces.filter {
-                    it.name != "java.util.function.Consumer"
-                }.toTypedArray()
+            if (lambdaClassPattern.matcher(className).matches()) {
+                cleanupLambdaClass(ctClass, classPool)
             }
 
             ctClass.writeFile(outputDir.canonicalPath)
@@ -102,7 +90,39 @@ class RetropilerTransform(val project: Project) : Transform() {
 
         copyResourceFiles(invocation.inputs, outputDir)
 
+        System.out.println("Retropiler transform: ${System.currentTimeMillis() - t0}")
         logger.info("transform: ${System.currentTimeMillis() - t0}ms")
+    }
+
+    // retrolambda generates `Consumer lambdaFactory$(...)` so it replaces the return type
+    // to retropiler runtime classes
+    private fun fixupLambdaClass(ctClass: CtClass, classPool: ClassPool) {
+        ctClass.addInterface(classPool.get("io.github.retropiler.runtime.JavaUtilFunctionConsumer"))
+
+        val lambdaFactory = ctClass.getDeclaredMethod(lambdaFactoryName)
+        if (lambdaFactory.parameterTypes.isEmpty()) {
+            val newLambdaFactory = CtMethod.make("""
+                            public static ${ctClass.name} _${lambdaFactoryName}() { return instance; }
+                        """, ctClass);
+            ctClass.addMethod(newLambdaFactory)
+        } else {
+            val newLambdaFactory = CtMethod(ctClass, "_" + lambdaFactoryName, lambdaFactory.parameterTypes, ctClass)
+            newLambdaFactory.modifiers = newLambdaFactory.modifiers.or(Modifier.STATIC)
+            newLambdaFactory.setBody("""
+                            { return new ${ctClass.name}($$); }
+                        """)
+            ctClass.addMethod(newLambdaFactory)
+        }
+    }
+
+    private fun cleanupLambdaClass(ctClass: CtClass, classPool: ClassPool) {
+        val functionInterface = "java.util.function.Consumer"
+
+        ctClass.interfaces = ctClass.interfaces.filter {
+            it.name != functionInterface
+        }.toTypedArray()
+
+        ctClass.removeMethod(ctClass.getDeclaredMethod(lambdaFactoryName))
     }
 
     fun collectClassPath(invocation: TransformInvocation): Set<File> {

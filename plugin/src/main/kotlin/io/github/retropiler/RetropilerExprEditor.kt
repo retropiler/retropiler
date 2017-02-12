@@ -13,13 +13,15 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
     val iterable = "io.github.retropiler.runtime.JavaUtilIterable"
     val consumer = "io.github.retropiler.runtime.JavaUtilFunctionConsumer"
 
+
+
     @Throws(CannotCompileException::class)
     override fun edit(m: MethodCall) {
         trace(m.method)
 
-        if (m.method.name == "lambdaFactory$") {
+        if (m.methodName == "lambdaFactory$") {
             m.replace("""
-                ${'$'}_ = ${'$'}0.lambdaFactory${'$'}(${'$'}${'$'});
+                ${'$'}_ = ${m.className}._lambdaFactory${'$'}(${'$'}${'$'});
             """)
         } else if (m.className == "java.util.List" && m.methodName == "forEach") {
             m.replace("""
