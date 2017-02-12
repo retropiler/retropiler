@@ -50,8 +50,6 @@ class RetropilerTransform(val project: Project) : Transform() {
 
         val outputDir = invocation.outputProvider.getContentLocation(name, outputTypes, scopes, Format.DIRECTORY)
 
-        val classNames = collectClassNames(invocation)
-
         val classPool = ClassPool(null)
         classPool.appendSystemPath()
         project.extensions.findByType(AppExtension::class.java).bootClasspath.forEach {
@@ -65,23 +63,22 @@ class RetropilerTransform(val project: Project) : Transform() {
 
         classPool.appendClassPath(project.rootProject.file("runtime/build/classes/main").absolutePath) // FIXME
 
-        classNames.forEach { className ->
-            if (lambdaClassPattern.matcher(className).matches()) {
-                val ctClass = classPool.get(className)
+        val ctClasses = collectClassNames(invocation).map { className -> classPool.get(className) }
+
+
+        ctClasses.forEach { ctClass ->
+            if (lambdaClassPattern.matcher(ctClass.simpleName).matches()) {
                 fixupLambdaClass(ctClass, classPool)
             }
         }
 
-        classNames.forEach { className ->
-            val ctClass = classPool.get(className)
+        ctClasses.forEach { ctClass ->
             ctClass.instrument(RetropilerExprEditor(classPool))
 
         }
 
-        classNames.forEach { className ->
-            val ctClass = classPool.get(className)
-
-            if (lambdaClassPattern.matcher(className).matches()) {
+        ctClasses.forEach { ctClass ->
+            if (lambdaClassPattern.matcher(ctClass.simpleName).matches()) {
                 cleanupLambdaClass(ctClass, classPool)
             }
 
@@ -90,7 +87,7 @@ class RetropilerTransform(val project: Project) : Transform() {
 
         copyResourceFiles(invocation.inputs, outputDir)
 
-        System.out.println("Retropiler transform: ${System.currentTimeMillis() - t0}")
+        System.out.println("Retropiler transform: ${System.currentTimeMillis() - t0}ms")
         logger.info("transform: ${System.currentTimeMillis() - t0}ms")
     }
 
