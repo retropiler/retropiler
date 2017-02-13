@@ -1,1 +1,1 @@
-include ':test', ':plugin', ':runtime'
+include ':test', ':plugin', ':runtime', ':annotations'

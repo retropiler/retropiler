@@ -1,2 +1,5 @@
 include ':plugin'
 project(':plugin').projectDir = new File('../plugin')
+
+include ':annotations'
+project(':annotations').projectDir = new File('../annotations')

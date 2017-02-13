@@ -1,14 +1,11 @@
-package io.github.retropiler.runtime;
+package io.github.retropiler.runtime.java.util;
 
 import java.util.Objects;
 
 import io.github.retropiler.annotation.RetroClass;
 
-/**
- * @see java.util.Objects
- */
 @RetroClass(Objects.class)
-public class JavaUtilObjects {
+public class $Objects {
 
     public static <T> T requireNonNull(T obj) {
         if (obj == null)

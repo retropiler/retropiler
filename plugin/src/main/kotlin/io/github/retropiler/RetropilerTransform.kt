@@ -16,6 +16,8 @@ import java.util.regex.Pattern
 
 class RetropilerTransform(val project: Project) : Transform() {
 
+    val retropilerRuntimePackage = "io.github.retropiler.runtime"
+
     val logger = LoggerFactory.getLogger(RetropilerTransform::class.java)
 
     val lambdaClassPattern = Pattern.compile(".+\\\$\\\$Lambda\\\$\\d+")
@@ -94,33 +96,42 @@ class RetropilerTransform(val project: Project) : Transform() {
 
     // retrolambda generates `Consumer lambdaFactory$(...)` so it replaces the return type
     // to retropiler runtime classes
-    private fun fixupLambdaClass(ctClass: CtClass, classPool: ClassPool) {
-        ctClass.addInterface(classPool.get("io.github.retropiler.runtime.JavaUtilFunctionConsumer"))
+    private fun fixupLambdaClass(lambdaClass: CtClass, classPool: ClassPool) {
+        val retroClass = getRetroClass(lambdaClass.interfaces[0], classPool)
 
-        val lambdaFactory = ctClass.getDeclaredMethod(lambdaFactoryName)
+        lambdaClass.addInterface(retroClass)
+
+        val lambdaFactory = lambdaClass.getDeclaredMethod(lambdaFactoryName)
         if (lambdaFactory.parameterTypes.isEmpty()) {
             val newLambdaFactory = CtMethod.make("""
-                            public static ${ctClass.name} _${lambdaFactoryName}() { return instance; }
-                        """, ctClass);
-            ctClass.addMethod(newLambdaFactory)
+                            public static ${lambdaClass.name} _${lambdaFactoryName}() { return instance; }
+                        """, lambdaClass);
+            lambdaClass.addMethod(newLambdaFactory)
         } else {
-            val newLambdaFactory = CtMethod(ctClass, "_" + lambdaFactoryName, lambdaFactory.parameterTypes, ctClass)
+            val newLambdaFactory = CtMethod(lambdaClass, "_" + lambdaFactoryName, lambdaFactory.parameterTypes, lambdaClass)
             newLambdaFactory.modifiers = newLambdaFactory.modifiers.or(Modifier.STATIC)
             newLambdaFactory.setBody("""
-                            { return new ${ctClass.name}($$); }
+                            { return new ${lambdaClass.name}($$); }
                         """)
-            ctClass.addMethod(newLambdaFactory)
+            lambdaClass.addMethod(newLambdaFactory)
         }
     }
 
-    private fun cleanupLambdaClass(ctClass: CtClass, classPool: ClassPool) {
-        val functionInterface = "java.util.function.Consumer"
+    private fun cleanupLambdaClass(lambdaClass: CtClass, classPool: ClassPool) {
+        // assume that lambdaClass implements just the single functional interface
+        val retroClass = getRetroClass(lambdaClass.interfaces[0], classPool)
 
-        ctClass.interfaces = ctClass.interfaces.filter {
-            it.name != functionInterface
+        lambdaClass.interfaces = lambdaClass.interfaces.filter {
+            it == retroClass
         }.toTypedArray()
 
-        ctClass.removeMethod(ctClass.getDeclaredMethod(lambdaFactoryName))
+        lambdaClass.removeMethod(lambdaClass.getDeclaredMethod(lambdaFactoryName))
+    }
+
+    fun getRetroClass(ctClass: CtClass, classPool: ClassPool): CtClass {
+        val packageName = ctClass.packageName
+        val simpleName = ctClass.simpleName
+        return classPool.get("$retropilerRuntimePackage.$packageName.${'$'}$simpleName")
     }
 
     fun collectClassPath(invocation: TransformInvocation): Set<File> {
