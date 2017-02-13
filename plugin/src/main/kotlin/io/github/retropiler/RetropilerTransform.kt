@@ -131,7 +131,7 @@ class RetropilerTransform(val project: Project) : Transform() {
     fun getRetroClass(ctClass: CtClass, classPool: ClassPool): CtClass {
         val packageName = ctClass.packageName
         val simpleName = ctClass.simpleName
-        return classPool.get("$retropilerRuntimePackage.$packageName.${'$'}$simpleName")
+        return classPool.get("$retropilerRuntimePackage.$packageName._$simpleName")
     }
 
     fun collectClassPath(invocation: TransformInvocation): Set<File> {

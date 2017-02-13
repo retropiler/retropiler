@@ -4,6 +4,7 @@ import io.github.retropiler.annotation.RetroMixin
 import javassist.*
 import javassist.expr.ExprEditor
 import javassist.expr.MethodCall
+import javassist.expr.NewExpr
 
 
 class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
@@ -12,8 +13,21 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
 
     val signaturePattern = Regex("\\bL([a-zA-Z0-9_/\\${'$'}]+);")
 
+    override fun edit(newExpr: NewExpr) {
+        val ctr = newExpr.constructor
+        val declaringClass = ctr.declaringClass
+        val retroClass = getRetroClassOrNull(declaringClass) ?: return
+        val signature = makeRetroSignature(ctr.signature)
+        val params = makeCastedParams(signature)
+        newExpr.replace("""
+        ${'$'}_ = new ${retroClass.name}(${params});
+        """)
+    }
+
     override fun edit(m: MethodCall) {
-        trace(m.method)
+        val method = m.method;
+
+        trace(method)
 
         if (m.methodName == "lambdaFactory$") {
             m.replace("""
@@ -22,28 +36,43 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
             return
         }
 
-        val declaringClass = m.method.declaringClass
-        val retroClass = getRetroClassOrNull(declaringClass)
-        if (retroClass != null) {
-            val signature = makeRetroSignature(m.signature)
+        val declaringClass = method.declaringClass
+        val retroClass = getRetroClassOrNull(declaringClass) ?: return
 
-            if (retroClass.hasAnnotation(RetroMixin::class.java)) {
-                System.out.println("RetroMixin: " + retroClass.name)
-                val staticMethodSignature = makeStaticMethodSignature(signature, declaringClass)
-                try {
-                    val retroMethod = retroClass.getMethod(m.methodName, staticMethodSignature)
-                    val params = makeCastedParams(signature)
-                    m.replace("""
+        val signature = makeRetroSignature(m.signature)
+
+        if (retroClass.hasAnnotation(RetroMixin::class.java)) { // mixin
+            System.out.println("RetroMixin: " + retroClass.name)
+            val staticMethodSignature = makeStaticMethodSignature(signature, declaringClass)
+            try {
+                val retroMethod = retroClass.getMethod(m.methodName, staticMethodSignature)
+                val params = makeCastedParams(signature)
+                m.replace("""
                         ${retroClass.name}.${retroMethod.name}((${declaringClass.name})$0, ${params});
                     """)
-                } catch (e: NotFoundException) {
-                    System.out.println("NotFoundException: ${m.methodName} ${staticMethodSignature}")
-                }
+            } catch (e: NotFoundException) {
+                System.out.println("NotFoundException: ${m.methodName} ${staticMethodSignature}")
+            }
+        } else { // replacement
+            System.out.println("RetroReplacement: " + retroClass.name)
+
+            if (isStatic(method)) {
+                // e.g. Optional.of(x) -> $Optional.of(x)
+                val params = makeCastedParams(signature)
+                m.replace("""
+                        ${'$'}_ = ${retroClass.name}.${m.methodName}(${params});
+                    """)
+            } else {
+                // e.g. invoke Optional#get() -> invoke $Optional#get()
+                val params = makeCastedParams(signature)
+                m.replace("""
+                        ${'$'}_ = ((${retroClass.name})$0).${m.methodName}(${params});
+                    """)
             }
         }
     }
 
-    private fun makeCastedParams(signature: String): String {
+    fun makeCastedParams(signature: String): String {
         val paramDescriptorsToken = Regex("\\((.*)\\)").find(signature)!!.groupValues[1]
         return signaturePattern.findAll(paramDescriptorsToken).mapIndexed { i, matched ->
             "(${matched.groupValues[1].replace("/", ".")})${'$'}${i + 1}"
@@ -53,7 +82,7 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
     fun getRetroClassOrNull(ctClass: CtClass): CtClass? {
         val packageName = ctClass.packageName
         val simpleName = ctClass.simpleName
-        return classPool.getOrNull("$retropilerRuntimePackage.$packageName.${'$'}$simpleName")
+        return classPool.getOrNull("$retropilerRuntimePackage.$packageName._$simpleName")
     }
 
     // replace "Ljava/lang/iterable;" to "Lio/github/retropiler/runtime/java/lang/$Iterable;"
@@ -73,6 +102,9 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
         return signature.replaceFirst("(", "(L${receiverType.name.replace(".", "/")};")
     }
 
+    fun isStatic(method: CtMethod): Boolean {
+        return method.modifiers.and(Modifier.STATIC) == Modifier.STATIC
+    }
 
     fun trace(method: CtMethod) {
         System.out.print(method.declaringClass.name)
