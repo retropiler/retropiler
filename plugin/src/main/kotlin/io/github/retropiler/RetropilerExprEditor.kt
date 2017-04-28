@@ -13,6 +13,10 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
 
     val signaturePattern = Regex("\\bL([a-zA-Z0-9_/\\${'$'}]+);")
 
+    fun info(message: CharSequence) {
+        System.out.println("[Retropiler] ${message}")
+    }
+
     override fun edit(newExpr: NewExpr) {
         val ctr = newExpr.constructor
         val declaringClass = ctr.declaringClass
@@ -42,7 +46,7 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
         val signature = makeRetroSignature(m.signature)
 
         if (retroClass.hasAnnotation(RetroMixin::class.java)) { // mixin
-            System.out.println("RetroMixin: " + retroClass.name)
+            info("RetroMixin: " + retroClass.name)
             val staticMethodSignature = makeStaticMethodSignature(signature, declaringClass)
             try {
                 val retroMethod = retroClass.getMethod(m.methodName, staticMethodSignature)
@@ -53,17 +57,19 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
             } catch (e: NotFoundException) {
                 System.out.println("NotFoundException: ${m.methodName} ${staticMethodSignature}")
             }
-        } else { // replacement
-            System.out.println("RetroReplacement: " + retroClass.name)
-
+        } else {
             if (isStatic(method)) {
-                // e.g. Optional.of(x) -> $Optional.of(x)
+                info("replace static method: ${retroClass.name}.${m.methodName}")
+
+                // e.g. Optional.of(x) -> _Optional.of(x)
                 val params = makeCastedParams(signature)
                 m.replace("""
                         ${'$'}_ = ${retroClass.name}#${m.methodName}(${params});
                     """)
             } else {
-                // e.g. invoke Optional#get() -> invoke $Optional#get()
+                info("replace instance method: ${retroClass.name}#${m.methodName}")
+
+                // e.g. invoke Optional#get() -> invoke _Optional#get()
                 val params = makeCastedParams(signature)
                 m.replace("""
                         ${'$'}_ = ((${retroClass.name})$0).${m.methodName}(${params});
@@ -107,12 +113,14 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
     }
 
     fun trace(method: CtMethod) {
-        System.out.print(method.declaringClass.name)
-        if (method.modifiers.and(Modifier.STATIC) != 0) {
-            System.out.print(".")
+        val s = StringBuilder()
+        s.append(method.declaringClass.name)
+        if (isStatic(method)) {
+            s.append(".")
         } else {
-            System.out.print("#")
+            s.append("#")
         }
-        System.out.println("${method.name} ${method.signature}");
+        s.append("${method.name} ${method.signature}")
+        info(s)
     }
 }
