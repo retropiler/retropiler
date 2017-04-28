@@ -36,11 +36,11 @@ class RetropilerTransform(val project: Project) : Transform() {
         return true
     }
 
-    override fun getScopes(): Set<QualifiedContent.Scope> {
+    override fun getScopes(): MutableSet<QualifiedContent.Scope> {
         return EnumSet.of(QualifiedContent.Scope.PROJECT)
     }
 
-    override fun getReferencedScopes(): Set<QualifiedContent.Scope> {
+    override fun getReferencedScopes(): MutableSet<QualifiedContent.Scope> {
         // to refer JARs in dependencies
         return EnumSet.of(
                 QualifiedContent.Scope.EXTERNAL_LIBRARIES,

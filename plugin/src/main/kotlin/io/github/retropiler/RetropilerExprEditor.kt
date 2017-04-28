@@ -48,7 +48,7 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
                 val retroMethod = retroClass.getMethod(m.methodName, staticMethodSignature)
                 val params = makeCastedParams(signature)
                 m.replace("""
-                        ${retroClass.name}.${retroMethod.name}((${declaringClass.name})$0, ${params});
+                        ${retroClass.name}#${retroMethod.name}((${declaringClass.name})$0, ${params});
                     """)
             } catch (e: NotFoundException) {
                 System.out.println("NotFoundException: ${m.methodName} ${staticMethodSignature}")
@@ -60,7 +60,7 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
                 // e.g. Optional.of(x) -> $Optional.of(x)
                 val params = makeCastedParams(signature)
                 m.replace("""
-                        ${'$'}_ = ${retroClass.name}.${m.methodName}(${params});
+                        ${'$'}_ = ${retroClass.name}#${m.methodName}(${params});
                     """)
             } else {
                 // e.g. invoke Optional#get() -> invoke $Optional#get()

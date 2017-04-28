@@ -1,7 +1,7 @@
 apply plugin: 'kotlin'
 
 buildscript {
-    ext.kotlin_version = '1.0.6'
+    ext.kotlin_version = '1.1.2'
     repositories {
         jcenter()
     }
@@ -18,7 +18,7 @@ dependencies {
     compile localGroovy()
     compile project(":annotations")
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    compile 'com.android.tools.build:gradle:2.2.3'
+    compile 'com.android.tools.build:gradle:2.3.1'
     compile 'org.javassist:javassist:3.21.0-GA'
     compile 'me.tatarka:gradle-retrolambda:3.5.0'
 }

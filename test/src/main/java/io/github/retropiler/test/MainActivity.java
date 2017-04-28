@@ -22,5 +22,10 @@ public class MainActivity extends AppCompatActivity {
         Arrays.asList("foo", "bar").forEach(s -> {
             Log.d("RetropilerExample", MainActivity.this + " " + s);
         });
+
+//        Optional<String> optStr = Optional.of("foo");
+//        optStr.ifPresent(s -> {
+//            Log.d("RetropilerExample", "Optional<String> -> " + s);
+//        });
     }
 }
