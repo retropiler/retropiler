@@ -5,7 +5,7 @@
 Java8 Langauge Feature is usually syntactic one, for example lambda expressions or default methods,
 which can be solved by tools like retrolambda.
 
-Java8 API, or Standard Library, is more difficult than Language Feature, because Dex, dalvik executable file format, does not allow bundle standard library. In fact, tt has been considered impossible.
+Java8 API, or Standard Library, is more difficult than Language Feature, because Dex, dalvik executable file format, does not allow bundle standard library. In fact, it was considered impossible -- before this project shows its possibility.
 
 Retropiler deals with the latter: it makes dex to bundle Java8 standard library by replacing
 its references to the original ones.
