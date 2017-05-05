@@ -1,8 +1,16 @@
 # Retropiler [![CircleCI](https://circleci.com/gh/retropiler/retropiler.svg?style=svg)](https://circleci.com/gh/retropiler/retropiler)
 
-This is an experimental project to "retropile", also called as "downpile" in some systems, Java8 standard class library to bundled one for Android before 7.0.
+"Java8 support" in Android is sometimes misleading because it includes a few independent issues.
 
-That is, the following code works on Android with API level 15 with retropiler:
+Java8 Langauge Feature is usually syntactic one, for example lambda expressions or default methods,
+which can be solved by tools like retrolambda.
+
+Java8 API, or Standard Library, is more difficult than Language Feature, because Dex, dalvik executable file format, does not allow bundle standard library. In fact, tt has been considered impossible.
+
+Retropiler deals with the latter: it makes dex to bundle Java8 standard library by replacing
+its references to the original ones.
+
+For example, the following code works on devices with Android API level 15 after processing by retropiler:
 
 ```java
 import java.util.Optional;
@@ -47,6 +55,10 @@ optStr.ifPresent(str -> {
     Log.d("XXX", str);
 });
 ```
+
+### Part of `java.util.function` package
+
+Unfortunately, default methods are not supported for now.
 
 ## See Also
 
