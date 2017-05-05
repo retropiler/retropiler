@@ -3,7 +3,6 @@ package io.github.retropiler.test;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import android.annotation.SuppressLint;
 import android.support.test.runner.AndroidJUnit4;
 
 import java.util.ArrayList;
@@ -14,7 +13,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
 @RunWith(AndroidJUnit4.class)
-@SuppressLint("NewApi")
 public class IterableTest {
 
     @Test
