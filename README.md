@@ -64,6 +64,10 @@ Unfortunately, default methods are not supported for now.
 
 * [Use Java 8 language features \| Android Studio](https://developer.android.com/studio/preview/features/java8-support.html) explains the "desugar" process that, for example, transforms lambda expressions to anonymous class expressions
 
+## Release Engineering
+
+There are two modules: `plugin/` as a Gradle plugin and `runtime/` as an Android library.
+
 ## Authors and Contributors
 
 FUJI Goro ([gfx](https://github.com/gfx)).

@@ -1,0 +1,9 @@
+ext {
+    metadata = [
+            userOrg   : 'retropiler',
+            groupId   : 'io.github.retropiler',
+            website   : 'https://github.com/retropiler/retropiler',
+            repository: 'https://github.com/retropiler/retropiler.git',
+            licences  : ['Apache-2.0']
+    ]
+}

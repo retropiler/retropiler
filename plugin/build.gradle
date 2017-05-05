@@ -22,3 +22,20 @@ dependencies {
     compile 'org.javassist:javassist:3.21.0-GA'
     compile 'me.tatarka:gradle-retrolambda:3.5.0'
 }
+
+if (rootProject.hasProperty('versionName') && rootProject.hasProperty('bintrayUser')) {
+    apply plugin: 'com.novoda.bintray-release'
+
+    publish {
+        artifactId = 'retropiler-gradle-plugin'
+        desc = 'Gradle Plugin to provide Java8 Standard Library for Android'
+
+        def metadata = rootProject.ext.metadata
+        userOrg = metadata.userOrg
+        groupId = metadata.groupId
+        publishVersion = metadata.version
+        website = metadata.website
+        repository = metadata.repository
+        licences = metadata.licences
+    }
+}

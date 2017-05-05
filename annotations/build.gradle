@@ -2,3 +2,21 @@ apply plugin: 'java'
 
 sourceCompatibility = JavaVersion.VERSION_1_7
 targetCompatibility = JavaVersion.VERSION_1_7
+
+if (rootProject.hasProperty('versionName') && rootProject.hasProperty('bintrayUser')) {
+    println(rootProject)
+    apply plugin: 'com.novoda.bintray-release'
+
+    publish {
+        artifactId = 'retropiler-annotations'
+        desc = 'Annotations for Retropiler'
+
+        def metadata = rootProject.ext.metadata
+        userOrg = metadata.userOrg
+        groupId = metadata.groupId
+        publishVersion = metadata.version
+        website = metadata.website
+        repository = metadata.repository
+        licences = metadata.licences
+    }
+}
