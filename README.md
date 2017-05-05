@@ -1,8 +1,8 @@
 # Retropiler [![CircleCI](https://circleci.com/gh/retropiler/retropiler.svg?style=svg)](https://circleci.com/gh/retropiler/retropiler)
 
-This is an experimental project to "retropile", also called as "downpile" in some systems, Java8 standard class libraries to work on Android before 7.0.
+This is an experimental project to "retropile", also called as "downpile" in some systems, Java8 standard class library to bundled one for Android before 7.0.
 
-That is, the following code works with retropler:
+That is, the following code works on Android with API level 15 with retropiler:
 
 ```java
 import java.util.Optional;
@@ -12,8 +12,10 @@ Optional<String> optStr = Optional.of("foo");
 assertThat(optStr.get(), is("foo")); // it works!
 ```
 
+Yes, this is the magic.
+
 The basic idea is that replacing Java8-specifc classes / methods to the bundled version of them
-byte-weaving.
+with bytecode weaving.
 
 That is, the above code is transformed into:
 
@@ -25,7 +27,7 @@ _Optional<String> optStr = _Optional.of("foo");
 assertThat(optStr.get(), is("foo")); // it works!
 ```
 
-It works even on Android API 15.
+It can work even on Android API 15.
 
 ## Supported Classes
 
@@ -45,6 +47,10 @@ optStr.ifPresent(str -> {
     Log.d("XXX", str);
 });
 ```
+
+## See Also
+
+* [Use Java 8 language features \| Android Studio](https://developer.android.com/studio/preview/features/java8-support.html) explains the "desugar" process that, for example, transforms lambda expressions to anonymous class expressions
 
 ## Authors and Contributors
 
