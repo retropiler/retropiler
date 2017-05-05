@@ -7,6 +7,8 @@ import javassist.ClassPool
 import javassist.CtClass
 import javassist.CtMethod
 import javassist.Modifier
+import javassist.bytecode.Descriptor
+import javassist.bytecode.LocalVariableAttribute
 import org.gradle.api.Project
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -67,10 +69,48 @@ class RetropilerTransform(val project: Project) : Transform() {
 
         val ctClasses = collectClassNames(invocation).map { className -> classPool.get(className) }
 
+        val optionalType = classPool.get("java.util.Optional")
+        val optionalDesc = Descriptor.of(optionalType)
+        val retroOptionalType = classPool.get("io.github.retropiler.runtime.java.util._Optional")
+        val retroOptionalDesc = Descriptor.of(retroOptionalType)
+
         // pre process
         ctClasses.forEach { ctClass ->
             if (lambdaClassPattern.matcher(ctClass.simpleName).matches()) {
                 fixupLambdaClass(ctClass, classPool)
+            }
+
+            // replace java.util.Optional to retropiler's in local variables
+            ctClass.methods.forEach { method ->
+                val ca = method.methodInfo2.codeAttribute
+                val lva = ca?.getAttribute(LocalVariableAttribute.tag) as LocalVariableAttribute?
+                if (lva != null) {
+
+                    val cp = method.methodInfo2.constPool
+                    val newLva = LocalVariableAttribute(cp)
+                    var entryIndex = 0
+
+                    (0 .. lva.tableLength()  - 1).forEach { i ->
+                        if (lva.descriptor(i) == optionalDesc) {
+                            newLva.addEntry(lva.startPc(i),
+                                    lva.codeLength(i),
+                                    lva.nameIndex(i),
+                                    cp.addUtf8Info(retroOptionalDesc),
+                                    entryIndex)
+                            entryIndex += Descriptor.dataSize(retroOptionalDesc)
+                        } else {
+                            newLva.addEntry(lva.startPc(i),
+                                    lva.codeLength(i),
+                                    lva.nameIndex(i),
+                                    lva.descriptorIndex(i),
+                                    entryIndex)
+                            entryIndex += Descriptor.dataSize(lva.descriptor(i))
+                        }
+                    }
+
+                    lva.set(newLva.get())
+                    ca.maxLocals = entryIndex
+                }
             }
         }
 
@@ -104,7 +144,9 @@ class RetropilerTransform(val project: Project) : Transform() {
         val lambdaFactory = lambdaClass.getDeclaredMethod(lambdaFactoryName)
         if (lambdaFactory.parameterTypes.isEmpty()) {
             val newLambdaFactory = CtMethod.make("""
-                            public static ${lambdaClass.name} _${lambdaFactoryName}() { return instance; }
+                            public static ${lambdaClass.name} _${lambdaFactoryName}() {
+                                return instance;
+                            }
                         """, lambdaClass);
             lambdaClass.addMethod(newLambdaFactory)
         } else {

@@ -2,6 +2,7 @@ package io.github.retropiler
 
 import io.github.retropiler.annotation.RetroMixin
 import javassist.*
+import javassist.bytecode.Descriptor
 import javassist.expr.ExprEditor
 import javassist.expr.MethodCall
 import javassist.expr.NewExpr
@@ -31,8 +32,9 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
     override fun edit(m: MethodCall) {
         val method = m.method;
 
-        trace(method)
+        trace(m)
 
+        // s/lambdaFactory()/_lambdaFactory()/
         if (m.methodName == "lambdaFactory$") {
             m.replace("""
                 ${'$'}_ = ${m.className}._lambdaFactory${'$'}(${'$'}${'$'});
@@ -45,7 +47,7 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
 
         val signature = makeRetroSignature(m.signature)
 
-        if (retroClass.hasAnnotation(RetroMixin::class.java)) { // mixin
+        if (retroClass.hasAnnotation(RetroMixin::class.java)) { // mixin (like _Iterable)
             info("RetroMixin: " + retroClass.name)
             val staticMethodSignature = makeStaticMethodSignature(signature, declaringClass)
             try {
@@ -55,24 +57,29 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
                         ${retroClass.name}#${retroMethod.name}((${declaringClass.name})$0, ${params});
                     """)
             } catch (e: NotFoundException) {
-                System.out.println("NotFoundException: ${m.methodName} ${staticMethodSignature}")
+                System.err.println("${e.javaClass}: ${m.methodName} ${staticMethodSignature}")
             }
         } else {
+            val params = makeCastedParams(signature)
+            val lhs = if (method.returnType.name != "void") {
+                "${'$'}_ ="
+            } else {
+                ""
+            }
+
             if (isStatic(method)) {
+                // e.g. invoke Optional.of(x) -> invoke _Optional.of(x)
                 info("replace static method: ${retroClass.name}.${m.methodName}")
 
-                // e.g. Optional.of(x) -> _Optional.of(x)
-                val params = makeCastedParams(signature)
                 m.replace("""
-                        ${'$'}_ = ${retroClass.name}#${m.methodName}(${params});
+                        ${lhs} ${retroClass.name}#${m.methodName}(${params});
                     """)
             } else {
+                // e.g. invoke Optional#get() -> invoke _Optional#get()
                 info("replace instance method: ${retroClass.name}#${m.methodName}")
 
-                // e.g. invoke Optional#get() -> invoke _Optional#get()
-                val params = makeCastedParams(signature)
                 m.replace("""
-                        ${'$'}_ = ((${retroClass.name})$0).${m.methodName}(${params});
+                        ${lhs} ((${retroClass.name})${'$'}0).${m.methodName}(${params});
                     """)
             }
         }
@@ -97,7 +104,7 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
             val className = matched.groupValues[1].replace("/", ".")
             val retroClass = getRetroClassOrNull(classPool.get(className))
             if (retroClass != null) {
-                "L${retroClass.name.replace(".", "/")};"
+                Descriptor.of(retroClass.name)
             } else {
                 matched.value
             }
@@ -105,22 +112,30 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
     }
 
     fun makeStaticMethodSignature(signature: String, receiverType: CtClass): String {
-        return signature.replaceFirst("(", "(L${receiverType.name.replace(".", "/")};")
+        return signature.replaceFirst("(", "(${Descriptor.of(receiverType.name)}")
     }
 
     fun isStatic(method: CtMethod): Boolean {
         return method.modifiers.and(Modifier.STATIC) == Modifier.STATIC
     }
 
-    fun trace(method: CtMethod) {
-        val s = StringBuilder()
+    fun trace(methodCall: MethodCall) {
+        val method = methodCall.method
+
+        val s = StringBuilder("> ")
         s.append(method.declaringClass.name)
         if (isStatic(method)) {
             s.append(".")
         } else {
             s.append("#")
         }
-        s.append("${method.name} ${method.signature}")
+        s.append(method.name)
+        s.append(" ")
+        s.append(method.signature)
+        s.append(" ")
+        s.append(methodCall.fileName)
+        s.append(":")
+        s.append(methodCall.lineNumber)
         info(s)
     }
 }
