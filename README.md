@@ -66,7 +66,24 @@ Unfortunately, default methods are not supported for now.
 
 ## Release Engineering
 
-There are two modules: `plugin/` as a Gradle plugin and `runtime/` as an Android library.
+There are three modules to publish:
+
+* `plugin/` - Gradle plugin
+* `runtime/` - runtime library
+* `annotations/` - annotation library
+
+You can publish them by:
+
+```shell
+make publish
+```
+
+with properties in `~/.gradle/gradle.properties`:
+
+```gradle.properties
+bintrayUser=$user
+bintrayKey=$key
+```
 
 ## Authors and Contributors
 
