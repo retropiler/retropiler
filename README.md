@@ -1,4 +1,4 @@
-# Retropiler [![CircleCI](https://circleci.com/gh/retropiler/retropiler.svg?style=svg)](https://circleci.com/gh/retropiler/retropiler)
+# Retropiler [![CircleCI](https://circleci.com/gh/retropiler/retropiler.svg?style=svg)](https://circleci.com/gh/retropiler/retropiler) [ ![Download](https://api.bintray.com/packages/retropiler/maven/retropiler-gradle-plugin/images/download.svg) ](https://bintray.com/retropiler/maven/retropiler-gradle-plugin/_latestVersion)
 
 "Java8 support" in Android is sometimes misunderstod because it includes a few independent issues.
 
