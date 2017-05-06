@@ -89,7 +89,7 @@ bintrayKey=$key
 
 FUJI Goro ([gfx](https://github.com/gfx)).
 
-And contributors are listed here: [Contributors](https://github.com/gfx/Android-Orma/graphs/contributors)
+And contributors are listed here: [Contributors](https://github.com/retropiler/retropiler/graphs/contributors)
 
 ## License
 
