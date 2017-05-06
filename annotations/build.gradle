@@ -4,7 +4,6 @@ sourceCompatibility = JavaVersion.VERSION_1_7
 targetCompatibility = JavaVersion.VERSION_1_7
 
 if (rootProject.hasProperty('versionName') && rootProject.hasProperty('bintrayUser')) {
-    println(rootProject)
     apply plugin: 'com.novoda.bintray-release'
 
     publish {
