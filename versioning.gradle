@@ -25,7 +25,7 @@ static int parseVersionName(String versionName) {
     return major * (1000 * 1000) + minor * 1000 + patchLevel;
 }
 
-def updateReadme(oldVersion, newVersion) {
+static void updateReadme(String oldVersion, String newVersion) {
     def template = file('README.md').text
     def result = template.replaceAll(Pattern.quote(oldVersion), newVersion)
     file("README.md").withWriter { it << result }
@@ -80,5 +80,40 @@ task bumpPatch {
 task version {
     doLast {
         println "v" + rootProject.ext.versionName
+    }
+}
+
+String shell(String command) {
+    def proc = ["sh", "-c", "cd ${rootProject.rootDir} ; ${command}"].execute()
+    if (proc.waitFor() != 0) {
+        throw new RuntimeException("Failed to run: ${command}\n${proc.err.text}")
+    } else {
+        def err = proc.err.text
+        if (err) {
+            System.err.println(err)
+        }
+    }
+    return proc.in.text;
+}
+
+task releng {
+    doLast {
+        def currentBranch = shell("git symbolic-ref --short HEAD")
+        def tag = "v" + rootProject.ext.versionName
+        println "Release engineering for ${tag} (branch=${currentBranch})"
+
+        def changes = shell("git status -s")
+        if (changes.trim()) {
+            throw new RuntimeException("There are changes not commited yet.\n${changes}")
+        }
+
+        println "> git tag ${tag}"
+        shell "git tag ${tag}"
+
+        println "> git push origin ${tag}"
+        shell "git push origin ${tag}"
+
+        println "> git push origin ${tag}"
+        shell "git push origin ${currentBranch}"
     }
 }
