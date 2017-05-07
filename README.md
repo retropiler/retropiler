@@ -1,5 +1,7 @@
 # Retropiler [![CircleCI](https://circleci.com/gh/retropiler/retropiler.svg?style=svg)](https://circleci.com/gh/retropiler/retropiler) [ ![Download](https://api.bintray.com/packages/retropiler/maven/retropiler-gradle-plugin/images/download.svg) ](https://bintray.com/retropiler/maven/retropiler-gradle-plugin/_latestVersion)
 
+NOTE: this project is incubating so use of it in production is not recommended.
+
 "Java8 support" in Android is sometimes misunderstod because it includes a few independent issues.
 
 Java8 Langauge Feature is usually syntactic one, for example lambda expressions or default methods,
@@ -20,7 +22,7 @@ Optional<String> optStr = Optional.of("foo");
 assertThat(optStr.get(), is("foo")); // it works!
 ```
 
-Yes, this is the magic.
+Here is the magic.
 
 The basic idea is that replacing Java8-specifc classes / methods to the bundled version of them
 with bytecode weaving.
@@ -36,6 +38,22 @@ assertThat(optStr.get(), is("foo")); // it works!
 ```
 
 It can work even on Android API 15.
+
+## Installation
+
+```groovy:build.gradle
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'io.github.retropiler:retropiler-gradle-plugin:0.0.2'
+    }
+}
+
+apply plugin: 'io.github.retropiler'
+```
 
 ## Supported Classes
 
@@ -58,11 +76,12 @@ optStr.ifPresent(str -> {
 
 ### Part of `java.util.function` package
 
-Unfortunately, default methods are not supported for now.
+Not all the functions are tested yet.
 
 ## See Also
 
 * [Use Java 8 language features \| Android Studio](https://developer.android.com/studio/preview/features/java8-support.html) explains the "desugar" process that, for example, transforms lambda expressions to anonymous class expressions
+* [Retrolambda](https://github.com/orfjackal/retrolambda)
 
 ## Release Engineering
 
