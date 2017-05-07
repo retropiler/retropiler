@@ -1,6 +1,6 @@
 # Retropiler [![CircleCI](https://circleci.com/gh/retropiler/retropiler.svg?style=svg)](https://circleci.com/gh/retropiler/retropiler) [ ![Download](https://api.bintray.com/packages/retropiler/maven/retropiler-gradle-plugin/images/download.svg) ](https://bintray.com/retropiler/maven/retropiler-gradle-plugin/_latestVersion)
 
-"Java8 support" in Android is sometimes misunderstod because it includes a few independent issues.
+"Java8 support" in Android is sometimes misunderstood because it includes a few independent issues.
 
 Java8 Langauge Feature is usually syntactic one, for example lambda expressions or default methods,
 which can be solved by tools like `retrolambda` or `desugar`.
