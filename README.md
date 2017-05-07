@@ -119,6 +119,10 @@ The class library in [runtime](https://github.com/retropiler/retropiler/tree/mas
 
 ## License
 
+The Java classes in `runtime/` module which were copied from AOSP are licensed as GPL.
+
+Other modules are licensed as Apache License 2.0:
+
 Copyright (c) 2017 FUJI Goro (gfx).
 
 Licensed under the Apache License, Version 2.0 (the "License");
