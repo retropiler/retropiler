@@ -60,7 +60,7 @@ class RetropilerTransform(val project: Project) : Transform() {
 
         // pre process
         ctClasses.forEach { ctClass ->
-            runtime.fixup(ctClass)
+            runtime.preprocess(ctClass)
         }
 
         // main process
@@ -70,7 +70,7 @@ class RetropilerTransform(val project: Project) : Transform() {
 
         // post process and write it down
         ctClasses.forEach { ctClass ->
-            runtime.cleanup(ctClass)
+            runtime.postprocess(ctClass)
 
             ctClass.writeFile(outputDir.canonicalPath)
         }

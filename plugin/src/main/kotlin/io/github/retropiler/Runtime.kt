@@ -1,20 +1,19 @@
 package io.github.retropiler
 
-import javassist.ClassPool
-import javassist.CtClass
-import javassist.CtMethod
-import javassist.Modifier
+import javassist.*
 import javassist.bytecode.Descriptor
 import javassist.bytecode.LocalVariableAttribute
 
 class Runtime(val classPool: ClassPool) {
+
     val PACKAGE = "io.github.retropiler.runtime"
-    val lambdaClassPattern = Regex(".+\\\$\\\$Lambda\\\$\\d+")
     val optionalType = classPool.get("java.util.Optional")!!
     val optionalDesc = Descriptor.of(optionalType)!!
     val retroOptionalType = classPool.get("io.github.retropiler.runtime.java.util._Optional")!!
     val retroOptionalDesc = Descriptor.of(retroOptionalType)!!
-    val lambdaFactoryName = "lambdaFactory$"
+
+    val lambdaClassPattern = Regex(".+\\\$\\\$Lambda\\\$\\d+") // for retrolambda
+    val lambdaFactoryName = "lambdaFactory$" // for retrolambda
 
     fun getRetroClassOrNull(ctClass: CtClass): CtClass? {
         val packageName = ctClass.packageName
@@ -23,17 +22,23 @@ class Runtime(val classPool: ClassPool) {
     }
 
     fun getRetroClass(ctClass: CtClass): CtClass {
-        val packageName = ctClass.packageName
-        val simpleName = ctClass.simpleName
-        return classPool.getOrNull("$PACKAGE.$packageName._$simpleName")
+        return getRetroClassOrNull(ctClass)!!
     }
 
-    fun fixup(ctClass: CtClass) {
+    fun getCompanionClassOrNull(ctClass: CtClass): CtClass? {
+        val packageName = ctClass.packageName
+        val simpleName = ctClass.simpleName
+        return classPool.getOrNull("$packageName.$simpleName${'$'}")
+    }
+
+    fun preprocess(ctClass: CtClass) {
         if (lambdaClassPattern.matches(ctClass.simpleName)) {
             fixupLambdaClass(ctClass)
         }
 
         fixupLocalVariableTypes(ctClass)
+
+        fixupDefaultMethods(ctClass)
     }
 
     // retrolambda generates `Consumer lambdaFactory$(...)` so it replaces the return type
@@ -95,7 +100,39 @@ class Runtime(val classPool: ClassPool) {
         }
     }
 
-     fun cleanup(ctClass: CtClass) {
+    fun fixupDefaultMethods(ctClass: CtClass) {
+        // Default methods are transformed into two parts by retrolambda:
+        // (1) abstract methods in interface
+        // (2) concrete methods in companion class (i.e. _Function$)
+        //
+        // Here adds all the methods that just calls the default, static methods if needed
+        ctClass.methods
+                .filter { Modifier.isAbstract(it.modifiers) }
+                .forEach { ctMethod ->
+                    val companionClass = getCompanionClassOrNull(ctMethod.declaringClass)
+                    if (companionClass != null && hasDefaultImpl(companionClass, ctMethod)) {
+                        val newMethod = CtMethod(ctMethod.returnType, ctMethod.name, ctMethod.parameterTypes, ctClass)
+                        if (ctMethod.returnType.name == "void") {
+                            newMethod.setBody("${companionClass.name}.${ctMethod.name}($0, $$);")
+                        } else {
+                            newMethod.setBody("return ${companionClass.name}.${ctMethod.name}($0, $$);")
+                        }
+                        ctClass.addMethod(newMethod)
+                    }
+                }
+    }
+
+    fun hasDefaultImpl(companionClass: CtClass, ctMethod: CtMethod): Boolean {
+        val params = arrayOf(ctMethod.declaringClass) + ctMethod.parameterTypes
+        try {
+            companionClass.getDeclaredMethod(ctMethod.name, params)
+            return true
+        } catch (e: NotFoundException) {
+            return false
+        }
+    }
+
+    fun postprocess(ctClass: CtClass) {
         if (!lambdaClassPattern.matches(ctClass.simpleName)) {
             return
         }

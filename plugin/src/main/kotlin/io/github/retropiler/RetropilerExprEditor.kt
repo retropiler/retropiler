@@ -113,7 +113,7 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
     }
 
     fun isStaticMethod(method: CtMethod): Boolean {
-        return method.modifiers.and(Modifier.STATIC) == Modifier.STATIC
+        return Modifier.isStatic(method.modifiers)
     }
 
     fun trace(methodCall: MethodCall) {

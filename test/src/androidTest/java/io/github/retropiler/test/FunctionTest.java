@@ -19,7 +19,7 @@ public class FunctionTest {
         assertThat(Function.<String>identity().apply("foo"), is("foo"));
     }
 
-    //@Test
+    @Test
     public void defaultMethods() throws Exception {
         assertThat(((Function<String, String>) String::toUpperCase).andThen(String::trim).apply(" foo "), is("FOO"));
     }
