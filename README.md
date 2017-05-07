@@ -76,6 +76,14 @@ optStr.ifPresent(str -> {
 
 Not all the functions are tested yet.
 
+## Methods Count
+
+Retropiler depends on Retrolambda to transform lambda expressions to anonymous classes.
+
+The methods defined in `runtime/` are here:
+
+[io.github.retropiler:retropiler-runtime:0.0.2](http://www.methodscount.com/?lib=io.github.retropiler%3Aretropiler-runtime%3A0.0.2)
+
 ## Caveats
 
 * This project is incubating so use of it in production is not recommended.
