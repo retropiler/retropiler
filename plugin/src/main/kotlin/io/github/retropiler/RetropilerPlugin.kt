@@ -15,5 +15,19 @@ class RetropilerPlugin: Plugin<Project> {
         }
 
         extension.registerTransform(RetropilerTransform(project))
+
+        if (isReleased()) {
+            project.dependencies.add("compile", "io.github.retropiler:retropiler-runtime:${version()}")
+        } else {
+            project.dependencies.add("compile", project.rootProject.project(":runtime"))
+        }
+    }
+
+    fun isReleased(): Boolean {
+        return javaClass.getPackage().implementationVersion != null
+    }
+
+    fun version(): String {
+        return javaClass.getPackage().implementationVersion
     }
 }
