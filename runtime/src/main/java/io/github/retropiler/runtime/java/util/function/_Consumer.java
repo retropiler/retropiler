@@ -24,6 +24,8 @@
  */
 package io.github.retropiler.runtime.java.util.function;
 
+import io.github.retropiler.runtime.java.util._Objects;
+
 /**
  * Represents an operation that accepts a single input argument and returns no
  * result. Unlike most other functional interfaces, {@code Consumer} is expected
@@ -58,8 +60,14 @@ public interface _Consumer<T> {
      * operation followed by the {@code after} operation
      * @throws NullPointerException if {@code after} is null
      */
-//    default _Consumer<T> andThen(_Consumer<? super T> after) {
-//        _Objects.requireNonNull(after);
-//        return (T t) -> { accept(t); after.accept(t); };
-//    }
+    default _Consumer<T> andThen(_Consumer<? super T> after) {
+        _Objects.requireNonNull(after);
+        return new _Consumer<T>() {
+            @Override
+            public void accept(T t) {
+                accept(t);
+                after.accept(t);
+            }
+        };
+    }
 }

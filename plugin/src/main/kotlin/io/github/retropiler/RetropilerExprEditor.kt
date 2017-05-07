@@ -6,22 +6,21 @@ import javassist.bytecode.Descriptor
 import javassist.expr.ExprEditor
 import javassist.expr.MethodCall
 import javassist.expr.NewExpr
+import org.slf4j.LoggerFactory
 
 
 class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
 
-    val retropilerRuntimePackage = "io.github.retropiler.runtime"
+    val logger = LoggerFactory.getLogger(RetropilerPlugin::class.java)!!
 
     val signaturePattern = Regex("\\bL([a-zA-Z0-9_/\\${'$'}]+);")
 
-    fun info(message: CharSequence) {
-        System.out.println("[Retropiler] ${message}")
-    }
+    val runtime = Runtime(classPool)
 
     override fun edit(newExpr: NewExpr) {
         val ctr = newExpr.constructor
         val declaringClass = ctr.declaringClass
-        val retroClass = getRetroClassOrNull(declaringClass) ?: return
+        val retroClass = runtime.getRetroClassOrNull(declaringClass) ?: return
         val signature = makeRetroSignature(ctr.signature)
         val params = makeCastedParams(signature)
         newExpr.replace("""
@@ -30,7 +29,7 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
     }
 
     override fun edit(m: MethodCall) {
-        val method = m.method;
+        val method = m.method
 
         trace(m)
 
@@ -43,12 +42,12 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
         }
 
         val declaringClass = method.declaringClass
-        val retroClass = getRetroClassOrNull(declaringClass) ?: return
+        val retroClass = runtime.getRetroClassOrNull(declaringClass) ?: return
 
         val signature = makeRetroSignature(m.signature)
 
         if (retroClass.hasAnnotation(RetroMixin::class.java)) { // mixin (like _Iterable)
-            info("RetroMixin: " + retroClass.name)
+            logger.info("RetroMixin: " + retroClass.name)
             val staticMethodSignature = makeStaticMethodSignature(signature, declaringClass)
             try {
                 val retroMethod = retroClass.getMethod(m.methodName, staticMethodSignature)
@@ -67,16 +66,20 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
                 ""
             }
 
-            if (isStatic(method)) {
+            if (isStaticMethod(method)) {
                 // e.g. invoke Optional.of(x) -> invoke _Optional.of(x)
-                info("replace static method: ${retroClass.name}.${m.methodName}")
+                logger.info("replace static method: ${retroClass.name}.${m.methodName}")
 
+                val className = StringBuilder(retroClass.name)
+                if (retroClass.isInterface) {
+                    className.append("$") // retrolambda companion class
+                }
                 m.replace("""
-                        ${lhs} ${retroClass.name}#${m.methodName}(${params});
+                        ${lhs} ${className}#${m.methodName}(${params});
                     """)
             } else {
                 // e.g. invoke Optional#get() -> invoke _Optional#get()
-                info("replace instance method: ${retroClass.name}#${m.methodName}")
+                logger.info("replace instance method: ${retroClass.name}#${m.methodName}")
 
                 m.replace("""
                         ${lhs} ((${retroClass.name})${'$'}0).${m.methodName}(${params});
@@ -92,17 +95,11 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
         }.joinToString(",")
     }
 
-    fun getRetroClassOrNull(ctClass: CtClass): CtClass? {
-        val packageName = ctClass.packageName
-        val simpleName = ctClass.simpleName
-        return classPool.getOrNull("$retropilerRuntimePackage.$packageName._$simpleName")
-    }
-
     // replace "Ljava/lang/iterable;" to "Lio/github/retropiler/runtime/java/lang/$Iterable;"
     fun makeRetroSignature(signature: String): String {
         return signaturePattern.replace(signature, { matched ->
             val className = matched.groupValues[1].replace("/", ".")
-            val retroClass = getRetroClassOrNull(classPool.get(className))
+            val retroClass = runtime.getRetroClassOrNull(classPool.get(className))
             if (retroClass != null) {
                 Descriptor.of(retroClass.name)
             } else {
@@ -115,7 +112,7 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
         return signature.replaceFirst("(", "(${Descriptor.of(receiverType.name)}")
     }
 
-    fun isStatic(method: CtMethod): Boolean {
+    fun isStaticMethod(method: CtMethod): Boolean {
         return method.modifiers.and(Modifier.STATIC) == Modifier.STATIC
     }
 
@@ -124,7 +121,7 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
 
         val s = StringBuilder("> ")
         s.append(method.declaringClass.name)
-        if (isStatic(method)) {
+        if (isStaticMethod(method)) {
             s.append(".")
         } else {
             s.append("#")
@@ -136,6 +133,6 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
         s.append(methodCall.fileName)
         s.append(":")
         s.append(methodCall.lineNumber)
-        info(s)
+        logger.info(s.toString())
     }
 }

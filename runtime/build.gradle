@@ -17,6 +17,10 @@ dependencies {
     compile project(":annotations")
 }
 
+retrolambda {
+    defaultMethods true
+}
+
 if (rootProject.hasProperty('versionName') && rootProject.hasProperty('bintrayUser')) {
     apply plugin: 'com.novoda.bintray-release'
 

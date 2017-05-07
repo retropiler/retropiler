@@ -17,9 +17,7 @@ import java.util.jar.JarFile
 
 class RetropilerTransform(val project: Project) : Transform() {
 
-    val retropilerRuntimePackage = "io.github.retropiler.runtime"
-
-    val logger = LoggerFactory.getLogger(RetropilerTransform::class.java)!!
+    val logger = LoggerFactory.getLogger(RetropilerPlugin::class.java)!!
 
     val lambdaClassPattern = Regex(".+\\\$\\\$Lambda\\\$\\d+")
 
@@ -60,11 +58,13 @@ class RetropilerTransform(val project: Project) : Transform() {
         }
 
         collectClassPath(invocation).forEach {
-            System.out.println("classPath: $it")
+            logger.trace("classPath: $it")
             classPool.appendClassPath(it.absolutePath)
         }
 
         classPool.appendClassPath(project.rootProject.file("runtime/build/classes/main").absolutePath) // FIXME
+
+        val runtime = Runtime(classPool)
 
         val ctClasses = collectClassNames(invocation).map { className -> classPool.get(className) }
 
@@ -76,11 +76,11 @@ class RetropilerTransform(val project: Project) : Transform() {
         // pre process
         ctClasses.forEach { ctClass ->
             if (lambdaClassPattern.matches(ctClass.simpleName)) {
-                fixupLambdaClass(ctClass, classPool)
+                fixupLambdaClass(runtime, ctClass)
             }
 
             // replace java.util.Optional to retropiler's in local variables
-            ctClass.methods.forEach { method ->
+            ctClass.declaredMethods.forEach { method ->
                 val ca = method.methodInfo2.codeAttribute
                 val lva = ca?.getAttribute(LocalVariableAttribute.tag) as LocalVariableAttribute?
                 if (lva != null) {
@@ -121,7 +121,7 @@ class RetropilerTransform(val project: Project) : Transform() {
         // post process and write it down
         ctClasses.forEach { ctClass ->
             if (lambdaClassPattern.matches(ctClass.simpleName)) {
-                cleanupLambdaClass(ctClass, classPool)
+                cleanupLambdaClass(runtime, ctClass)
             }
 
             ctClass.writeFile(outputDir.canonicalPath)
@@ -129,14 +129,13 @@ class RetropilerTransform(val project: Project) : Transform() {
 
         copyResourceFiles(invocation.inputs, outputDir)
 
-        System.out.println("Retropiler transform: ${System.currentTimeMillis() - t0}ms")
-        logger.info("transform: ${System.currentTimeMillis() - t0}ms")
+        logger.trace("transform: ${System.currentTimeMillis() - t0}ms")
     }
 
     // retrolambda generates `Consumer lambdaFactory$(...)` so it replaces the return type
     // to retropiler runtime classes
-    private fun fixupLambdaClass(lambdaClass: CtClass, classPool: ClassPool) {
-        val retroClass = getRetroClass(lambdaClass.interfaces[0], classPool)
+    private fun fixupLambdaClass(runtime: Runtime, lambdaClass: CtClass) {
+        val retroClass = runtime.getRetroClass(lambdaClass.interfaces[0])
 
         lambdaClass.addInterface(retroClass)
 
@@ -158,21 +157,15 @@ class RetropilerTransform(val project: Project) : Transform() {
         }
     }
 
-    private fun cleanupLambdaClass(lambdaClass: CtClass, classPool: ClassPool) {
+    private fun cleanupLambdaClass(runtime: Runtime, lambdaClass: CtClass) {
         // assume that lambdaClass implements just the single functional interface
-        val retroClass = getRetroClass(lambdaClass.interfaces[0], classPool)
+        val retroClass = runtime.getRetroClass(lambdaClass.interfaces[0])
 
         lambdaClass.interfaces = lambdaClass.interfaces.filter {
             it == retroClass
         }.toTypedArray()
 
         lambdaClass.removeMethod(lambdaClass.getDeclaredMethod(lambdaFactoryName))
-    }
-
-    fun getRetroClass(ctClass: CtClass, classPool: ClassPool): CtClass {
-        val packageName = ctClass.packageName
-        val simpleName = ctClass.simpleName
-        return classPool.get("$retropilerRuntimePackage.$packageName._$simpleName")
     }
 
     fun collectClassPath(invocation: TransformInvocation): Set<File> {
@@ -255,7 +248,7 @@ class RetropilerTransform(val project: Project) : Transform() {
                         .filter { !it.name.endsWith(SdkConstants.DOT_CLASS) }
                         .forEach { file ->
                             val dest = File(outputDir, file.relativeTo(dirPath).path)
-                            System.out.println(dest)
+                            logger.trace("DEBUG: resource files: $dest")
                         }
             }
         }
