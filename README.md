@@ -91,6 +91,8 @@ FUJI Goro ([gfx](https://github.com/gfx)).
 
 And contributors are listed here: [Contributors](https://github.com/retropiler/retropiler/graphs/contributors)
 
+The class library in [runtime](https://github.com/retropiler/retropiler/tree/master/runtime) module comes from Open JDK via AOSP.
+
 ## License
 
 Copyright (c) 2017 FUJI Goro (gfx).
