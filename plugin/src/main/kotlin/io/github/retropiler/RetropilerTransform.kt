@@ -14,15 +14,14 @@ import org.slf4j.LoggerFactory
 import java.io.File
 import java.util.*
 import java.util.jar.JarFile
-import java.util.regex.Pattern
 
 class RetropilerTransform(val project: Project) : Transform() {
 
     val retropilerRuntimePackage = "io.github.retropiler.runtime"
 
-    val logger = LoggerFactory.getLogger(RetropilerTransform::class.java)
+    val logger = LoggerFactory.getLogger(RetropilerTransform::class.java)!!
 
-    val lambdaClassPattern = Pattern.compile(".+\\\$\\\$Lambda\\\$\\d+")
+    val lambdaClassPattern = Regex(".+\\\$\\\$Lambda\\\$\\d+")
 
     val lambdaFactoryName = "lambdaFactory$"
 
@@ -50,7 +49,7 @@ class RetropilerTransform(val project: Project) : Transform() {
     }
 
     override fun transform(invocation: TransformInvocation) {
-        val t0 = System.currentTimeMillis();
+        val t0 = System.currentTimeMillis()
 
         val outputDir = invocation.outputProvider.getContentLocation(name, outputTypes, scopes, Format.DIRECTORY)
 
@@ -76,7 +75,7 @@ class RetropilerTransform(val project: Project) : Transform() {
 
         // pre process
         ctClasses.forEach { ctClass ->
-            if (lambdaClassPattern.matcher(ctClass.simpleName).matches()) {
+            if (lambdaClassPattern.matches(ctClass.simpleName)) {
                 fixupLambdaClass(ctClass, classPool)
             }
 
@@ -121,7 +120,7 @@ class RetropilerTransform(val project: Project) : Transform() {
 
         // post process and write it down
         ctClasses.forEach { ctClass ->
-            if (lambdaClassPattern.matcher(ctClass.simpleName).matches()) {
+            if (lambdaClassPattern.matches(ctClass.simpleName)) {
                 cleanupLambdaClass(ctClass, classPool)
             }
 
@@ -147,7 +146,7 @@ class RetropilerTransform(val project: Project) : Transform() {
                             public static ${lambdaClass.name} _${lambdaFactoryName}() {
                                 return instance;
                             }
-                        """, lambdaClass);
+                        """, lambdaClass)
             lambdaClass.addMethod(newLambdaFactory)
         } else {
             val newLambdaFactory = CtMethod(lambdaClass, "_" + lambdaFactoryName, lambdaFactory.parameterTypes, lambdaClass)
@@ -186,7 +185,7 @@ class RetropilerTransform(val project: Project) : Transform() {
             files.addAll(input.directoryInputs.map { it.file })
             files.addAll(input.jarInputs.map { it.file })
         }
-        return files;
+        return files
     }
 
     fun collectClassNames(invocation: TransformInvocation): List<String> {
@@ -250,7 +249,7 @@ class RetropilerTransform(val project: Project) : Transform() {
     fun copyResourceFiles(inputs: Collection<TransformInput>, outputDir: File) {
         inputs.forEach {
             it.directoryInputs.forEach {
-                val dirPath = it.file.absoluteFile;
+                val dirPath = it.file.absoluteFile
 
                 listFilesRecursively(dirPath)
                         .filter { !it.name.endsWith(SdkConstants.DOT_CLASS) }
