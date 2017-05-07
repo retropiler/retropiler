@@ -24,6 +24,14 @@ dependencies {
 }
 
 if (rootProject.hasProperty('versionName') && rootProject.hasProperty('bintrayUser')) {
+    jar {
+        manifest {
+            attributes(
+                    "Implementation-Version": project.file("../VERSION").text.trim(),
+            )
+        }
+    }
+
     apply plugin: 'com.novoda.bintray-release'
 
     publish {
