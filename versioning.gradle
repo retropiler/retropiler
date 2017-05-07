@@ -25,10 +25,10 @@ static int parseVersionName(String versionName) {
     return major * (1000 * 1000) + minor * 1000 + patchLevel;
 }
 
-static void updateReadme(String oldVersion, String newVersion) {
-    def template = file('README.md').text
+void updateReadme(String oldVersion, String newVersion) {
+    def template = rootProject.file('README.md').text
     def result = template.replaceAll(Pattern.quote(oldVersion), newVersion)
-    file("README.md").withWriter { it << result }
+    rootProject.file("README.md").withWriter { it << result }
 }
 
 rootProject.ext {
