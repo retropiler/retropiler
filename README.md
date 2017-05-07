@@ -3,7 +3,7 @@
 "Java8 support" in Android is sometimes misunderstod because it includes a few independent issues.
 
 Java8 Langauge Feature is usually syntactic one, for example lambda expressions or default methods,
-which can be solved by tools like retrolambda or desugar.
+which can be solved by tools like `retrolambda` or `desugar`.
 
 Java8 API, or Standard Library, is more difficult than Language Feature, because Dex, dalvik executable file format, does not allow bundle standard library. In fact, it was considered impossible -- before this project shows its possibility.
 
