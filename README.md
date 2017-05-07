@@ -1,7 +1,5 @@
 # Retropiler [![CircleCI](https://circleci.com/gh/retropiler/retropiler.svg?style=svg)](https://circleci.com/gh/retropiler/retropiler) [ ![Download](https://api.bintray.com/packages/retropiler/maven/retropiler-gradle-plugin/images/download.svg) ](https://bintray.com/retropiler/maven/retropiler-gradle-plugin/_latestVersion)
 
-NOTE: this project is incubating so use of it in production is not recommended.
-
 "Java8 support" in Android is sometimes misunderstod because it includes a few independent issues.
 
 Java8 Langauge Feature is usually syntactic one, for example lambda expressions or default methods,
@@ -77,6 +75,13 @@ optStr.ifPresent(str -> {
 ### Part of `java.util.function` package
 
 Not all the functions are tested yet.
+
+## Caveats
+
+* This project is incubating so use of it in production is not recommended.
+* The gradle plugin automatically applies `retrolambda`
+* The gradle plugin does not support Android SDK's desugar (bundled in the build tools for Android O)
+  * Will support desugar after its stable release
 
 ## See Also
 
