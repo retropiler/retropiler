@@ -60,7 +60,7 @@ class Runtime(val classPool: ClassPool) {
     // retrolambda generates `Consumer lambdaFactory$(...)` so it replaces the return type
     // to retropiler runtime classes
     private fun fixupLambdaClass(lambdaClass: CtClass) {
-        val retroClass = getRetroClass(lambdaClass.interfaces[0])
+        val retroClass = getRetroClassOrNull(lambdaClass.interfaces[0]) ?: return
 
         lambdaClass.addInterface(retroClass)
 
@@ -153,8 +153,7 @@ class Runtime(val classPool: ClassPool) {
             return
         }
 
-        // assume that lambdaClass implements just the single functional interface
-        val retroClass = getRetroClass(ctClass.interfaces[0])
+        val retroClass = getRetroClassOrNull(ctClass.interfaces[0]) ?: return
 
         ctClass.interfaces = ctClass.interfaces.filter {
             it == retroClass

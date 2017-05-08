@@ -47,4 +47,10 @@ public class MainActivity extends AppCompatActivity {
         Optional<String> optStr = Optional.of("baz");
         optStr.ifPresent(s -> text.append("Optional#ifPresent: " + s));
     }
+
+    void f() {
+        // just places it here for the regression: https://github.com/retropiler/retropiler/pull/10
+        Runnable task = () -> {};
+        task.run();
+    }
 }

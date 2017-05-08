@@ -46,6 +46,8 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
 
     override fun edit(m: MethodCall) {
         val method = m.method
+        val declaringClass = method.declaringClass
+        val retroClass = runtime.getRetroClassOrNull(declaringClass) ?: return
 
         trace(m)
 
@@ -56,9 +58,6 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
             """)
             return
         }
-
-        val declaringClass = method.declaringClass
-        val retroClass = runtime.getRetroClassOrNull(declaringClass) ?: return
 
         val signature = makeRetroSignature(m.signature)
 
