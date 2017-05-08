@@ -124,11 +124,11 @@ And contributors are listed here: [Contributors](https://github.com/retropiler/r
 
 The class library in [runtime](https://github.com/retropiler/retropiler/tree/master/runtime) module comes from Open JDK via AOSP.
 
-## License
+## Licenses
 
-The Java source files in `runtime/` module which were copied from AOSP, are licensed as GPL v2+CE as described in each file.
+The Java source files in `runtime/` module which were copied from AOSP, are licensed under GPL v2+CE as described in each file.
 
-Other modules are licensed as Apache License 2.0:
+Other modules except for `runtime/` are licensed under Apache License 2.0:
 
 Copyright (c) 2017 FUJI Goro (gfx).
 
