@@ -34,7 +34,10 @@ if (rootProject.hasProperty('versionName') && rootProject.hasProperty('bintrayUs
         publishVersion = metadata.version
         website = metadata.website
         repository = metadata.repository
-        licences = metadata.licences
+
+        // The runtime library comes from AOSP, which comes from Open JDK,
+        // which licensed as GPL v2.0 with "classpath exception".
+        licences = ["GPL-2.0+CE"]
     }
 }
 
