@@ -32,6 +32,11 @@ import static org.hamcrest.Matchers.*;
 public class OptionalTest {
 
     @Test
+    public void optionalEmpty() throws Exception {
+        assertThat(Optional.empty().isPresent(), is(false));
+    }
+
+    @Test
     public void optionalGet() throws Exception {
         Optional<String> s = Optional.of("foo");
 
