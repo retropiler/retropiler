@@ -3,7 +3,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'me.tatarka:gradle-retrolambda:3.5.0'
+        classpath 'me.tatarka:gradle-retrolambda:3.6.1'
     }
 }
 
