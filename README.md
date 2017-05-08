@@ -45,7 +45,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'io.github.retropiler:retropiler-gradle-plugin:0.0.3'
+        classpath 'io.github.retropiler:retropiler-gradle-plugin:0.0.4'
     }
 }
 
@@ -81,7 +81,7 @@ Retropiler depends on Retrolambda to transform lambda expressions to anonymous c
 
 The methods defined in `runtime/` are here:
 
-[io.github.retropiler:retropiler-runtime:0.0.3](http://www.methodscount.com/?lib=io.github.retropiler%3Aretropiler-runtime%3A0.0.3)
+[io.github.retropiler:retropiler-runtime:0.0.4](http://www.methodscount.com/?lib=io.github.retropiler%3Aretropiler-runtime%3A0.0.4)
 
 ## Caveats
 
