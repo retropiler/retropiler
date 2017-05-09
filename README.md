@@ -149,7 +149,7 @@ The Java source files in `runtime/` module which were copied from AOSP, are lice
 
 Other modules except for `runtime/` are licensed under Apache License 2.0:
 
-Copyright (c) 2017 FUJI Goro (gfx).
+Copyright (c) 2017 The Retropiler Project.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
