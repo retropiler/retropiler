@@ -75,7 +75,7 @@ optStr.ifPresent(str -> {
 
 Not all the functions are tested yet.
 
-## Customize
+## Customizing Runtime Class Mapping
 
 You can customize mapping of stndard class to alternative runtime class:
 
