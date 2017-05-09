@@ -20,7 +20,7 @@ import javassist.*
 import javassist.bytecode.Descriptor
 import javassist.bytecode.LocalVariableAttribute
 
-class Runtime(val classPool: ClassPool) {
+class Weaver(val classPool: ClassPool) {
 
     val PACKAGE = "io.github.retropiler.runtime"
     val optionalType = classPool.get("java.util.Optional")!!

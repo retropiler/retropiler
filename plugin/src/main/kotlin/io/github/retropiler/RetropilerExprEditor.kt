@@ -31,7 +31,7 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
 
     val signaturePattern = Regex("\\bL([a-zA-Z0-9_/\\${'$'}]+);")
 
-    val runtime = Runtime(classPool)
+    val runtime = Weaver(classPool)
 
     override fun edit(newExpr: NewExpr) {
         val ctr = newExpr.constructor

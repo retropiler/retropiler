@@ -71,7 +71,7 @@ class RetropilerTransform(val project: Project) : Transform() {
 
         classPool.appendClassPath(project.rootProject.file("runtime/build/classes/main").absolutePath) // FIXME
 
-        val runtime = Runtime(classPool)
+        val runtime = Weaver(classPool)
         val ctClasses = collectClassNames(invocation).map { className -> classPool.get(className) }
 
         // pre process
