@@ -34,6 +34,9 @@ class RetropilerExprEditor(val weaver: Weaver) : ExprEditor() {
 
     val signaturePattern = Regex("\\bL([a-zA-Z0-9_/\\${'$'}]+);")
 
+    val retrolambdaFactoryMethodName = "lambdaFactory$"
+    val retropilerFactoryMethodName = "_lambdaFactory$"
+
     override fun edit(newExpr: NewExpr) {
         val ctr = newExpr.constructor
         val declaringClass = ctr.declaringClass
@@ -48,17 +51,18 @@ class RetropilerExprEditor(val weaver: Weaver) : ExprEditor() {
     override fun edit(m: MethodCall) {
         val method = m.method
         val declaringClass = method.declaringClass
-        val retroClass = weaver.getRetroClassOrNull(declaringClass) ?: return
 
         trace(m)
 
         // s/lambdaFactory()/_lambdaFactory()/
-        if (m.methodName == "lambdaFactory$") {
+        if (m.methodName == retrolambdaFactoryMethodName && hasRetropilerFactoryName(declaringClass)) {
             m.replace("""
-                ${'$'}_ = ${m.className}._lambdaFactory${'$'}(${'$'}${'$'});
+                ${'$'}_ = ${m.className}.$retropilerFactoryMethodName(${'$'}${'$'});
             """)
             return
         }
+
+        val retroClass = weaver.getRetroClassOrNull(declaringClass) ?: return
 
         val signature = makeRetroSignature(m.signature)
 
@@ -101,6 +105,15 @@ class RetropilerExprEditor(val weaver: Weaver) : ExprEditor() {
                         ${lhs} ((${retroClass.name})${'$'}0).${m.methodName}(${params});
                     """)
             }
+        }
+    }
+
+    fun hasRetropilerFactoryName(ctClass: CtClass): Boolean {
+        try {
+            ctClass.getDeclaredMethod(retropilerFactoryMethodName)
+            return true
+        } catch (e: NotFoundException) {
+            return false
         }
     }
 
