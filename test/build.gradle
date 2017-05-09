@@ -1,6 +1,15 @@
 apply plugin: 'io.github.retropiler'
 apply plugin: 'com.android.application'
 
+retropiler {
+
+    mapClassName { ext, ctClass ->
+        println("[mapClassName] ${ctClass.name}")
+
+        ext.defaultMapClassName.apply(ext, ctClass)
+    }
+}
+
 android {
     compileSdkVersion 25
     buildToolsVersion "25.0.2"

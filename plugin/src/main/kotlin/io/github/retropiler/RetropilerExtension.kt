@@ -16,8 +16,11 @@
 
 package io.github.retropiler
 
+import javassist.CtClass
+import java.util.function.BiFunction
 
 open class RetropilerExtension {
+
     companion object {
         val NAME = "retropiler"
     }
@@ -26,5 +29,15 @@ open class RetropilerExtension {
 
     fun runtimePackage(name: String) {
         runtimePackage = name
+    }
+
+    var defaultMapClassName = BiFunction { extension: RetropilerExtension, ctClass: CtClass ->
+        "${extension.runtimePackage}.${ctClass.packageName}._${ctClass.simpleName}"
+    }
+
+    var mapClassName = defaultMapClassName
+
+    fun mapClassName(function: BiFunction<RetropilerExtension, CtClass, String>) {
+        mapClassName = function
     }
 }

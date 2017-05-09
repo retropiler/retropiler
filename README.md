@@ -75,6 +75,25 @@ optStr.ifPresent(str -> {
 
 Not all the functions are tested yet.
 
+## Customize
+
+You can customize mapping of stndard class to alternative runtime class:
+
+```groovy:build.gradle
+apply plugin: 'io.github.retropiler'
+
+retropiler {
+    // the default runtime package
+    runtimePackage "io.github.retropiler.runtime"
+
+    // the default mapping function
+    mapClassName { ext, ctClass ->
+        // e.g. map java.util.Optional to io.github.retropiler.runtime.java.util._Optional
+        "${ext.runtimePackage}.${ctClass.packageName}._${ctClass.simpleName}"
+    }
+}
+```
+
 ## Methods Count
 
 Retropiler depends on Retrolambda to transform lambda expressions to anonymous classes.
