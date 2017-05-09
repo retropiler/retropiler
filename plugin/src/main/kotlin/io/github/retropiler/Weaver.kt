@@ -20,21 +20,25 @@ import javassist.*
 import javassist.bytecode.Descriptor
 import javassist.bytecode.LocalVariableAttribute
 
-class Weaver(val classPool: ClassPool) {
+class Weaver(val classPool: ClassPool, config: RetropilerExtension) {
 
-    val PACKAGE = "io.github.retropiler.runtime"
+    val runtimePackage = config.runtimePackage
     val optionalType = classPool.get("java.util.Optional")!!
     val optionalDesc = Descriptor.of(optionalType)!!
-    val retroOptionalType = classPool.get("io.github.retropiler.runtime.java.util._Optional")!!
+    val retroOptionalType = classPool.get("$runtimePackage.java.util._Optional")!!
     val retroOptionalDesc = Descriptor.of(retroOptionalType)!!
 
     val lambdaClassPattern = Regex(".+\\\$\\\$Lambda\\\$\\d+") // for retrolambda
     val lambdaFactoryName = "lambdaFactory$" // for retrolambda
 
+    fun getRetroClassOrNull(className: String): CtClass? {
+        return getRetroClassOrNull(classPool.get(className))
+    }
+
     fun getRetroClassOrNull(ctClass: CtClass): CtClass? {
         val packageName = ctClass.packageName
         val simpleName = ctClass.simpleName
-        return classPool.getOrNull("$PACKAGE.$packageName._$simpleName")
+        return classPool.getOrNull("$runtimePackage.$packageName._$simpleName")
     }
 
     fun getRetroClass(ctClass: CtClass): CtClass {

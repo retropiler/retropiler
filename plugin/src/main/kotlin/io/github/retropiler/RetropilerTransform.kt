@@ -71,22 +71,23 @@ class RetropilerTransform(val project: Project) : Transform() {
 
         classPool.appendClassPath(project.rootProject.file("runtime/build/classes/main").absolutePath) // FIXME
 
-        val runtime = Weaver(classPool)
+        val config = project.extensions.findByType(RetropilerExtension::class.java)!!
+        val weaver = Weaver(classPool, config)
         val ctClasses = collectClassNames(invocation).map { className -> classPool.get(className) }
 
         // pre process
         ctClasses.forEach { ctClass ->
-            runtime.preprocess(ctClass)
+            weaver.preprocess(ctClass)
         }
 
         // main process
         ctClasses.forEach { ctClass ->
-            ctClass.instrument(RetropilerExprEditor(classPool))
+            ctClass.instrument(RetropilerExprEditor(weaver))
         }
 
         // post process and write it down
         ctClasses.forEach { ctClass ->
-            runtime.postprocess(ctClass)
+            weaver.postprocess(ctClass)
 
             ctClass.writeFile(outputDir.canonicalPath)
         }

@@ -17,7 +17,10 @@
 package io.github.retropiler
 
 import io.github.retropiler.annotation.RetroMixin
-import javassist.*
+import javassist.CtClass
+import javassist.CtMethod
+import javassist.Modifier
+import javassist.NotFoundException
 import javassist.bytecode.Descriptor
 import javassist.expr.ExprEditor
 import javassist.expr.MethodCall
@@ -25,18 +28,16 @@ import javassist.expr.NewExpr
 import org.slf4j.LoggerFactory
 
 
-class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
+class RetropilerExprEditor(val weaver: Weaver) : ExprEditor() {
 
     val logger = LoggerFactory.getLogger(RetropilerPlugin::class.java)!!
 
     val signaturePattern = Regex("\\bL([a-zA-Z0-9_/\\${'$'}]+);")
 
-    val runtime = Weaver(classPool)
-
     override fun edit(newExpr: NewExpr) {
         val ctr = newExpr.constructor
         val declaringClass = ctr.declaringClass
-        val retroClass = runtime.getRetroClassOrNull(declaringClass) ?: return
+        val retroClass = weaver.getRetroClassOrNull(declaringClass) ?: return
         val signature = makeRetroSignature(ctr.signature)
         val params = makeCastedParams(signature)
         newExpr.replace("""
@@ -47,7 +48,7 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
     override fun edit(m: MethodCall) {
         val method = m.method
         val declaringClass = method.declaringClass
-        val retroClass = runtime.getRetroClassOrNull(declaringClass) ?: return
+        val retroClass = weaver.getRetroClassOrNull(declaringClass) ?: return
 
         trace(m)
 
@@ -114,7 +115,7 @@ class RetropilerExprEditor(val classPool: ClassPool) : ExprEditor() {
     fun makeRetroSignature(signature: String): String {
         return signaturePattern.replace(signature, { matched ->
             val className = matched.groupValues[1].replace("/", ".")
-            val retroClass = runtime.getRetroClassOrNull(classPool.get(className))
+            val retroClass = weaver.getRetroClassOrNull(className)
             if (retroClass != null) {
                 Descriptor.of(retroClass.name)
             } else {

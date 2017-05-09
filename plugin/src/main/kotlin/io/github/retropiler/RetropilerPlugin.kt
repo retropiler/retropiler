@@ -22,13 +22,14 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 
 class RetropilerPlugin: Plugin<Project> {
-    override fun apply(project: Project) {
 
-        project.plugins.withType(AppPlugin::class.java) { plugin ->
+    override fun apply(project: Project) {
+        project.extensions.create(RetropilerExtension.NAME, RetropilerExtension::class.java)
+
+        project.plugins.withType(AppPlugin::class.java) {
             project.apply(mapOf("plugin" to "me.tatarka.retrolambda"))
 
             val extension = project.extensions.findByType(AppExtension::class.java)
-
             extension.registerTransform(RetropilerTransform(project))
 
             if (isReleased()) {
