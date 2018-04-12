@@ -23,11 +23,22 @@ import org.gradle.api.Project
 
 class RetropilerPlugin: Plugin<Project> {
 
+    companion object {
+        const val DEFAULT_USE_RETROLAMBDA = true
+    }
+
     override fun apply(project: Project) {
         project.extensions.create(RetropilerExtension.NAME, RetropilerExtension::class.java)
 
         project.plugins.withType(AppPlugin::class.java) {
-            project.apply(mapOf("plugin" to "me.tatarka.retrolambda"))
+
+            println(project)
+            if(when (project.extensions.extraProperties.has("useRetrolambda")) {
+                true -> project.extensions.extraProperties.get("useRetrolambda")
+                else -> DEFAULT_USE_RETROLAMBDA
+            } as Boolean) {
+                project.apply(mapOf("plugin" to "me.tatarka.retrolambda"))
+            }
 
             val extension = project.extensions.findByType(AppExtension::class.java)
             extension.registerTransform(RetropilerTransform(project))
