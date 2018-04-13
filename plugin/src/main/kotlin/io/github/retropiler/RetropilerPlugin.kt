@@ -31,8 +31,6 @@ class RetropilerPlugin: Plugin<Project> {
         project.extensions.create(RetropilerExtension.NAME, RetropilerExtension::class.java)
 
         project.plugins.withType(AppPlugin::class.java) {
-
-            println(project)
             if(when (project.extensions.extraProperties.has("useRetrolambda")) {
                 true -> project.extensions.extraProperties.get("useRetrolambda")
                 else -> DEFAULT_USE_RETROLAMBDA
